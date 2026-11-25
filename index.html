@@ -1,0 +1,927 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#173552">
+<title>Cath Lab Companion</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, Arial, sans-serif;
+  background: #eef3f8;
+  color: #173552;
+  margin: 0;
+  padding: 14px;
+}
+
+header {
+  background: #173552;
+  color: white;
+  padding: 22px;
+  border-radius: 16px;
+}
+
+h1 { font-size: 24px; margin: 0; }
+h2 { font-size: 19px; }
+h3 { font-size: 16px; }
+
+button, select {
+  font-size: 15px;
+  padding: 12px;
+  border: 1px solid #ccd7e2;
+  border-radius: 9px;
+  background: white;
+  color: #173552;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+nav button { flex: 1; }
+
+.active {
+  background: #245780;
+  color: white;
+}
+
+details {
+  background: white;
+  border-radius: 12px;
+  margin: 10px 0;
+  border: 1px solid #d8e1ea;
+  overflow: hidden;
+}
+
+summary {
+  font-weight: bold;
+  padding: 17px;
+  cursor: pointer;
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  border-top: 1px solid #e5ebf0;
+  line-height: 1.5;
+}
+
+input[type="checkbox"] {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+  accent-color: #24866a;
+}
+
+.completed {
+  text-decoration: line-through;
+  opacity: .55;
+}
+
+progress {
+  width: 100%;
+  height: 15px;
+  accent-color: #71d5b2;
+}
+
+.warning {
+  background: #fff3d9;
+  border-left: 5px solid #d69232;
+  padding: 14px;
+  margin: 12px 0;
+  line-height: 1.6;
+  border-radius: 7px;
+}
+
+.emergency {
+  background: #fff0f0;
+  border-left: 5px solid #b92828;
+  padding: 14px;
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin: 10px 0;
+}
+
+.event {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.reset {
+  background: #a72d35;
+  color: white;
+  width: 100%;
+  margin-top: 20px;
+}
+
+small {
+  display: block;
+  line-height: 1.5;
+  color: #536579;
+  margin: 15px 0;
+}
+
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>Cath Lab Companion</h1>
+  <p>Epic • Philips Xper • Philips X-ray</p>
+  <progress id="progress" value="0" max="100"></progress>
+  <p id="progressText">0% complete</p>
+</header>
+
+<nav>
+  <button onclick="showPage('checklist')">Checklist</button>
+  <button onclick="showPage('recording')">Recording</button>
+  <button onclick="showPage('pressure')">Pressures</button>
+  <button onclick="showPage('emergencies')">Emergencies</button>
+</nav>
+
+<section id="checklist">
+
+<h2>Case Selection</h2>
+
+<select id="procedure" onchange="renderChecklist()">
+  <option>All Procedures</option>
+  <option>Diagnostic LHC</option>
+  <option>RHC</option>
+  <option>Combined LHC/RHC</option>
+  <option>Graft Study</option>
+  <option>PCI</option>
+  <option>PCI + Impella</option>
+  <option>PCI + IABP</option>
+</select>
+
+<select id="access" onchange="renderChecklist()">
+  <option>All Access</option>
+  <option>Radial</option>
+  <option>Femoral</option>
+  <option>Radial + Femoral</option>
+</select>
+
+<div>
+  <button onclick="expandAll(true)">Expand All</button>
+  <button onclick="expandAll(false)">Collapse All</button>
+</div>
+
+<div id="checklistContent"></div>
+
+</section>
+
+<section id="recording" class="hidden">
+
+<h2>Recording Practice</h2>
+
+<div class="warning">
+Practice controls only. These buttons do not operate
+Philips Xper or document in Epic.
+</div>
+
+<div id="recordingButtons"></div>
+
+<div class="card">
+<h3>Balloon Selection</h3>
+<div id="balloonButtons"></div>
+
+<p>Selected balloon: <strong id="selectedBalloon">A</strong></p>
+
+<button onclick="recordEvent('Balloon ' + balloon + ' Inflation')">
+Inflation
+</button>
+
+<button onclick="recordEvent('Balloon ' + balloon + ' Deflation')">
+Deflation
+</button>
+</div>
+
+<div class="card">
+<h3>Practice Event Log</h3>
+<div id="eventLog"></div>
+<button onclick="undoEvent()">Undo Last Event</button>
+</div>
+
+</section>
+
+<section id="pressure" class="hidden">
+
+<h2>Hemodynamic Reference</h2>
+
+<div class="card">
+<h3>Normal Aortic Pressure</h3>
+<svg viewBox="0 0 300 110" width="100%">
+<path d="M0 90 L15 90 Q20 15 35 15
+Q48 20 58 50 L65 58 L72 50
+Q90 70 100 90
+L115 90 Q120 15 135 15
+Q148 20 158 50 L165 58 L172 50
+Q190 70 200 90
+L215 90 Q220 15 235 15
+Q248 20 258 50 L265 58 L272 50
+Q290 70 300 90"
+fill="none" stroke="#24866a" stroke-width="3"/>
+</svg>
+Brisk systolic upstroke, dicrotic notch and
+diastolic runoff.
+</div>
+
+<div class="card">
+<h3>Damped Pressure</h3>
+<svg viewBox="0 0 300 110" width="100%">
+<path d="M0 90 Q15 90 25 65 Q40 40 55 65
+Q80 90 100 90
+Q115 90 125 65 Q140 40 155 65
+Q180 90 200 90
+Q215 90 225 65 Q240 40 255 65
+Q280 90 300 90"
+fill="none" stroke="#d69232" stroke-width="3"/>
+</svg>
+Reduced amplitude, sluggish upstroke and blunted
+waveform. Immediately notify the physician.
+</div>
+
+<div class="card">
+<h3>Ventricularized Pressure</h3>
+<svg viewBox="0 0 300 110" width="100%">
+<path d="M0 100 L10 100 Q18 10 32 10
+Q48 15 55 65 Q60 100 75 100 L100 100
+L110 100 Q118 10 132 10
+Q148 15 155 65 Q160 100 175 100 L200 100
+L210 100 Q218 10 232 10
+Q248 15 255 65 Q260 100 275 100 L300 100"
+fill="none" stroke="#b92828" stroke-width="3"/>
+</svg>
+Disproportionately reduced diastolic pressure with
+a ventricular-like contour. Possible coronary
+ostial obstruction. Alert the operator immediately.
+Injection should wait until the operator confirms safety.
+</div>
+
+<div class="warning">
+<strong>AO 97/63 vs. peripheral BP 131/78</strong>
+<p>Immediately communicate the discrepancy.</p>
+<p>"Your aortic pressure is damped compared with
+the peripheral pressure."</p>
+Compare waveform morphology, catheter position,
+pressure source, transducer level and zero with the team.
+</div>
+
+<small>Waveforms are educational illustrations,
+not actual patient tracings.</small>
+
+</section>
+
+<section id="emergencies" class="hidden">
+<h2>Emergency Reference</h2>
+<div id="emergencyContent"></div>
+</section>
+
+<button class="reset" onclick="resetCase()">
+Start New Case
+</button>
+
+<small>
+Educational companion only. Follow hospital protocols
+and physician direction. Do not enter patient identifiers.
+This app does not connect to Epic, Philips Xper or X-ray.
+Verify all workflow labels against your department's
+configuration.
+</small>
+
+<script>
+
+const sections = [
+
+{
+title: "1. Patient Arrival — Epic",
+type: "general",
+tasks: [
+"Confirm patient identity using two identifiers",
+"Review procedure order and indication",
+"Verify consent",
+"Review allergies and contrast reactions",
+"Review CBC, renal function and electrolytes",
+"Review coagulation results as applicable",
+"Review anticoagulants and antiplatelets",
+"Confirm IV access",
+"Review previous cath, PCI and CABG history",
+"Review baseline assessment and vital signs"
+]
+},
+
+{
+title: "2. Philips Xper Setup",
+type: "general",
+tasks: [
+"Open correct patient and procedure",
+"Confirm performing physician",
+"Verify Philips X-ray worklist",
+"Click BP box and verify pressure source",
+"Monitor label: Left Heart Cath when applicable",
+"Procedure conditions: Air / Rest when accurate",
+"Procedure layout: LHC",
+"For Dr. Arkin: select Arkin LHC layout if available",
+"Capture settings: verify Record",
+"Capture settings: verify Snap",
+"Verify ECG leads and rhythm",
+"Verify pulse oximetry",
+"Verify NIBP and invasive pressure channels",
+"Verify alarms",
+"Level and zero transducers per protocol"
+]
+},
+
+{
+title: "3. Time-Out and Baseline",
+type: "general",
+tasks: [
+"Record patient arrival",
+"Participate in time-out",
+"Confirm procedure and access site",
+"Record baseline vital signs",
+"Document oxygen administration",
+"Document sedation and medications",
+"Record procedure start per department definition",
+"Confirm emergency equipment readiness"
+]
+},
+
+{
+title: "4. Radial Access",
+type: "radial",
+tasks: [
+"Document right or left radial access",
+"Record local anesthetic",
+"Record access time",
+"Document sheath size",
+"Document radial medications actually administered",
+"Document anticoagulation",
+"Record ACT when applicable",
+"Monitor access site and distal perfusion"
+]
+},
+
+{
+title: "5. Femoral Access",
+type: "femoral",
+tasks: [
+"Document right or left femoral access",
+"Distinguish arterial from venous access",
+"Document ultrasound guidance if performed",
+"Record sheath size",
+"Record access time",
+"Monitor access site and hemodynamics",
+"Assess distal perfusion",
+"Document closure device or retained sheath"
+]
+},
+
+{
+title: "6. Diagnostic Left Heart Cath",
+type: "lhc",
+tasks: [
+"Document catheter and exchanges",
+"Confirm aortic pressure waveform",
+"Record AO pressure when requested",
+"Monitor left coronary engagement",
+"Monitor right coronary engagement",
+"Watch for damping or ventricularization",
+"Record LV pressure if obtained",
+"Record LVEDP if obtained",
+"Record LV-to-AO pullback if performed",
+"Document ventriculography if performed",
+"Confirm operator-reported findings"
+]
+},
+
+{
+title: "7. Right Heart Cath",
+type: "rhc",
+tasks: [
+"Confirm venous access",
+"Verify pressure channel and zero",
+"Record RA pressure",
+"Record RV pressure",
+"Record PA pressure",
+"Record PCWP with operator confirmation",
+"Record oxygen saturation sampling sites",
+"Document cardiac output method",
+"Record cardiac output and cardiac index",
+"Verify calculated hemodynamics"
+]
+},
+
+{
+title: "8. Graft Angiography",
+type: "graft",
+tasks: [
+"Review bypass anatomy",
+"Document LIMA graft if imaged",
+"Document RIMA graft if imaged",
+"Document SVG and target vessel",
+"Distinguish graft from native vessel intervention",
+"Document operator-reported findings"
+]
+},
+
+{
+title: "9. PCI and Intervention",
+type: "pci",
+tasks: [
+"Confirm target vessel and lesion",
+"Document guide catheter",
+"Document guidewire",
+"Record anticoagulation and antiplatelets",
+"Record ACT and repeat ACT per protocol",
+"Document balloon type and size",
+"Record balloon inflation",
+"Record balloon deflation",
+"Document actual inflation pressure and duration",
+"Record stent size and location",
+"Document stent deployment",
+"Document post-dilation",
+"Document IVUS if performed",
+"Document OCT if performed",
+"Document FFR or iFR if performed",
+"Document final angiography",
+"Confirm operator-reported final result"
+]
+},
+
+{
+title: "10. Impella Support",
+type: "impella",
+tasks: [
+"Confirm device type and access",
+"Record insertion",
+"Record support initiation",
+"Document displayed support level and flow",
+"Monitor arterial pressure",
+"Monitor device alarms",
+"Document anticoagulation and ACT",
+"Document operator-confirmed position assessment",
+"Record support changes",
+"Record removal or transfer status"
+]
+},
+
+{
+title: "11. IABP Support",
+type: "iabp",
+tasks: [
+"Document access and balloon insertion",
+"Record support initiation",
+"Document trigger mode",
+"Document assist ratio",
+"Record augmented pressure",
+"Monitor timing and alarms with trained operator",
+"Assess distal perfusion",
+"Monitor access site",
+"Document support changes",
+"Record removal or transfer status"
+]
+},
+
+{
+title: "12. Case Completion",
+type: "general",
+tasks: [
+"Record final hemodynamics",
+"Record final rhythm",
+"Reconcile medications and doses",
+"Reconcile contrast total",
+"Reconcile fluoroscopy time",
+"Reconcile radiation dose",
+"Verify device and implant documentation",
+"Document sheath removal or retained sheath",
+"Document TR Band or closure device",
+"Document complications and actions",
+"Assess final access site",
+"Record procedure end",
+"Record patient departure",
+"Complete Xper documentation",
+"Complete Epic documentation",
+"Verify Philips X-ray archive"
+]
+},
+
+{
+title: "13. Recovery and Handoff",
+type: "general",
+tasks: [
+"Communicate procedure and findings",
+"Report access site and sheath status",
+"Report TR Band application time",
+"Report TR Band air volume if applicable",
+"Report anticoagulation and last ACT",
+"Report sedation and medications",
+"Report contrast total",
+"Report complications",
+"Communicate ordered hemostasis plan",
+"Report final neurovascular assessment",
+"Complete receiving nurse handoff"
+]
+}
+
+];
+
+const emergencyList = [
+["Damped Pressure",
+"Immediately notify the operator. Assess waveform and pressure system with the team."],
+
+["Ventricularization",
+"Alert the operator immediately. Possible coronary ostial obstruction."],
+
+["Hypotension",
+"Announce the change. Assess rhythm, patient status and waveform reliability. Consider bleeding, ischemia, tamponade or medication effects with the team."],
+
+["Bradycardia / Heart Block",
+"Notify the physician. Prepare emergency response and pacing equipment as directed."],
+
+["VT / VF / Cardiac Arrest",
+"Activate emergency response and follow institutional ACLS protocols."],
+
+["ST Elevation",
+"Immediately alert the operator and document ECG changes and symptoms."],
+
+["Coronary Dissection",
+"Immediately notify the team and prepare equipment as directed."],
+
+["Coronary Perforation",
+"Escalate immediately. Monitor hemodynamics and prepare emergency equipment."],
+
+["Tamponade",
+"Escalate sudden hypotension or concerning hemodynamic changes immediately."],
+
+["No-Reflow",
+"Document operator-reported findings and actual treatments."],
+
+["Contrast Reaction",
+"Alert the team. Assess airway, breathing and circulation. Follow emergency reaction protocol."],
+
+["Respiratory Depression",
+"Announce falling oxygen saturation, apnea or altered responsiveness. Follow sedation rescue protocols."],
+
+["Access-Site Bleeding",
+"Notify the team. Assess hemodynamics and follow bleeding-control protocols."],
+
+["Retroperitoneal Bleeding",
+"Consider with unexplained hypotension or abdominal, flank or back pain after femoral access. Escalate urgently."],
+
+["Impella / IABP Alarm",
+"Notify the trained device operator. Follow device-specific and institutional protocols."]
+];
+
+function loadSaved() {
+  try {
+    return JSON.parse(
+      localStorage.getItem("cathChecklist") || "{}"
+    );
+  } catch {
+    return {};
+  }
+}
+
+let checked = loadSaved();
+let events = [];
+let balloon = "A";
+
+function saveProgress() {
+  try {
+    localStorage.setItem(
+      "cathChecklist",
+      JSON.stringify(checked)
+    );
+  } catch {
+    document.getElementById("progressText").title =
+      "Local storage unavailable";
+  }
+}
+
+function showPage(page) {
+  ["checklist", "recording", "pressure", "emergencies"]
+    .forEach(id => {
+      document.getElementById(id).classList.toggle(
+        "hidden", id !== page
+      );
+    });
+}
+
+function isVisible(section) {
+
+  const access =
+    document.getElementById("access").value;
+
+  const procedure =
+    document.getElementById("procedure").value;
+
+  if (section.type === "general") return true;
+
+  if (section.type === "radial")
+    return access !== "Femoral";
+
+  if (section.type === "femoral")
+    return access !== "Radial";
+
+  if (procedure === "All Procedures") return true;
+
+  const map = {
+    "Diagnostic LHC": ["lhc"],
+    "RHC": ["rhc"],
+    "Combined LHC/RHC": ["lhc", "rhc"],
+    "Graft Study": ["lhc", "graft"],
+    "PCI": ["lhc", "graft", "pci"],
+    "PCI + Impella": ["lhc", "graft", "pci", "impella"],
+    "PCI + IABP": ["lhc", "graft", "pci", "iabp"]
+  };
+
+  return (map[procedure] || []).includes(section.type);
+}
+
+function renderChecklist() {
+
+  const container =
+    document.getElementById("checklistContent");
+
+  container.innerHTML = "";
+
+  sections.forEach((section, i) => {
+
+    if (!isVisible(section)) return;
+
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+
+    summary.textContent = section.title;
+    details.appendChild(summary);
+
+    section.tasks.forEach((task, j) => {
+
+      const key = i + "-" + j;
+
+      const label = document.createElement("label");
+      label.className = "task";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = !!checked[key];
+
+      const text = document.createElement("span");
+      text.textContent = task;
+
+      if (checkbox.checked)
+        text.classList.add("completed");
+
+      checkbox.onchange = function() {
+        checked[key] = checkbox.checked;
+        text.classList.toggle(
+          "completed", checkbox.checked
+        );
+        saveProgress();
+        updateProgress();
+      };
+
+      label.appendChild(checkbox);
+      label.appendChild(text);
+      details.appendChild(label);
+    });
+
+    container.appendChild(details);
+  });
+
+  updateProgress();
+}
+
+function updateProgress() {
+
+  let total = 0;
+  let done = 0;
+
+  sections.forEach((section, i) => {
+
+    if (!isVisible(section)) return;
+
+    section.tasks.forEach((task, j) => {
+      total++;
+      if (checked[i + "-" + j]) done++;
+    });
+  });
+
+  const percent = total
+    ? Math.round(done / total * 100)
+    : 0;
+
+  document.getElementById("progress").value = percent;
+
+  document.getElementById("progressText").textContent =
+    done + " / " + total +
+    " tasks complete (" + percent + "%)";
+}
+
+function expandAll(open) {
+  document.querySelectorAll("#checklistContent details")
+    .forEach(item => item.open = open);
+}
+
+function recordEvent(name) {
+
+  events.unshift({
+    name: name,
+    time: new Date().toLocaleTimeString()
+  });
+
+  renderEvents();
+}
+
+function renderEvents() {
+
+  const log = document.getElementById("eventLog");
+  log.innerHTML = "";
+
+  events.forEach(event => {
+
+    const row = document.createElement("div");
+    row.className = "event";
+
+    row.textContent = event.time + " — " + event.name;
+
+    log.appendChild(row);
+  });
+
+  if (!events.length)
+    log.textContent = "No practice events recorded.";
+}
+
+function undoEvent() {
+  events.shift();
+  renderEvents();
+}
+
+const recordingGroups = {
+
+"Capture Settings": [
+"Record", "Snap", "AO Pressure",
+"LV Pressure", "LVEDP", "Pullback"
+],
+
+"Right Heart Pressures": [
+"RA", "RV", "PA", "PCWP",
+"Cardiac Output", "Oxygen Saturation"
+],
+
+"Access": [
+"Right Radial", "Left Radial",
+"Right Femoral Artery", "Left Femoral Artery",
+"Femoral Vein", "Sheath Inserted",
+"Sheath Removed", "TR Band", "Closure Device"
+],
+
+"Coronary Vessels": [
+"Left Main", "LAD", "LCx", "RCA",
+"Diagonal", "OM", "PDA", "PLB"
+],
+
+"Bypass Grafts": [
+"LIMA", "RIMA", "SVG", "Graft Intervention"
+],
+
+"Interventions": [
+"Guidewire", "ACT", "Stent Deployment",
+"Post-Dilation", "IVUS", "OCT", "FFR", "iFR"
+],
+
+"Mechanical Support": [
+"Impella Inserted", "Impella Support Changed",
+"Impella Removed", "IABP Inserted",
+"IABP Support Changed", "IABP Removed"
+]
+
+};
+
+function renderRecording() {
+
+  const container =
+    document.getElementById("recordingButtons");
+
+  Object.entries(recordingGroups).forEach(
+    ([title, items]) => {
+
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      card.appendChild(heading);
+
+      items.forEach(item => {
+
+        const button = document.createElement("button");
+        button.textContent = item;
+        button.onclick = () => recordEvent(item);
+
+        card.appendChild(button);
+      });
+
+      container.appendChild(card);
+    }
+  );
+
+  "ABCDEFGH".split("").forEach(letter => {
+
+    const button = document.createElement("button");
+    button.textContent = letter;
+
+    button.onclick = function() {
+
+      balloon = letter;
+
+      document.getElementById("selectedBalloon")
+        .textContent = letter;
+
+      document.querySelectorAll("#balloonButtons button")
+        .forEach(b => b.classList.remove("active"));
+
+      button.classList.add("active");
+    };
+
+    if (letter === balloon)
+      button.classList.add("active");
+
+    document.getElementById("balloonButtons")
+      .appendChild(button);
+  });
+}
+
+function renderEmergencies() {
+
+  const container =
+    document.getElementById("emergencyContent");
+
+  emergencyList.forEach(([title, content]) => {
+
+    const details = document.createElement("details");
+
+    const summary = document.createElement("summary");
+    summary.textContent = title;
+
+    const body = document.createElement("div");
+    body.className = "emergency";
+    body.textContent = content;
+
+    details.appendChild(summary);
+    details.appendChild(body);
+    container.appendChild(details);
+  });
+}
+
+function resetCase() {
+
+  if (!confirm("Clear all checklist progress and practice events?"))
+    return;
+
+  checked = {};
+  events = [];
+  balloon = "A";
+
+  document.getElementById("selectedBalloon")
+    .textContent = "A";
+
+  document.querySelectorAll("#balloonButtons button")
+    .forEach(b => {
+      b.classList.toggle("active", b.textContent === "A");
+    });
+
+  saveProgress();
+  renderChecklist();
+  renderEvents();
+  showPage("checklist");
+}
+
+renderChecklist();
+renderRecording();
+renderEmergencies();
+renderEvents();
+
+</script>
+</body>
+</html>
